@@ -38,3 +38,5 @@ This is the frontend for the Inventory Order Sync Management System. It is struc
 ## Notes
 
 - Ensure that the backend for the Inventory Order Sync Management System is running to fully utilize the features of this frontend application.
+
+## link backend: https://github.com/boakang/Inventory_OrderSyncManagementSystem_backend
