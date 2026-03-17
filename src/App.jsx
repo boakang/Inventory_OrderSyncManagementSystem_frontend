@@ -2,11 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import ProductsPage from './pages/ProductsPage';
-import CustomersPage from './pages/CustomersPage';
-import OrdersPage from './pages/OrdersPage';
-import InventoryPage from './pages/InventoryPage';
-import ReportsPage from './pages/ReportsPage';
+import ProductsPage from './pages/ProductsPage.jsx';
+import CustomersPage from './pages/CustomersPage.jsx';
+import OrdersPage from './pages/OrdersPage.jsx';
+import InventoryPage from './pages/InventoryPage.jsx';
+import ReportsPage from './pages/ReportsPage.jsx';
 
 function App() {
   return (
