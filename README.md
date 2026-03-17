@@ -113,7 +113,7 @@ Axios client nằm trong `src/api.js` với `baseURL: '/api'`. Các nhóm API hi
 
 Lưu ý: một số trang hiện có dữ liệu demo/fallback khi API chưa sẵn sàng (phục vụ UI preview).
 
-## Database & Backend (theo yêu cầu HR)
+## Database & Backend 
 
 Phần dưới đây mô tả phạm vi công việc liên quan Database/Backend trong bối cảnh hệ thống này. Các artefact thực thi (schema, ERD, scripts, EF models, migrations) thuộc repo backend .NET.
 
