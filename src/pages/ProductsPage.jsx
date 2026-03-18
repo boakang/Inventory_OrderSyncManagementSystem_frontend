@@ -7,7 +7,7 @@ import {
   Trash2, 
   Filter
 } from 'lucide-react';
-import { productApi } from '../api';
+import { categoryApi, productApi, supplierApi } from '../api';
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -18,15 +18,22 @@ function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [editingProductId, setEditingProductId] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsError, setOptionsError] = useState('');
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
     price: '',
     stockQuantity: '',
+    categoryID: '',
+    supplierID: '',
   });
 
   useEffect(() => {
     fetchProducts();
+    fetchOptions();
   }, []);
 
   const fetchProducts = async () => {
@@ -44,6 +51,26 @@ function ProductsPage() {
     }
   };
 
+  const fetchOptions = async () => {
+    try {
+      setOptionsLoading(true);
+      setOptionsError('');
+      const [categoriesRes, suppliersRes] = await Promise.all([
+        categoryApi.getAll(),
+        supplierApi.getAll(),
+      ]);
+      setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
+      setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
+    } catch (error) {
+      console.error('Error fetching options:', error);
+      setCategories([]);
+      setSuppliers([]);
+      setOptionsError('Failed to load categories/suppliers. Check backend is running.');
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
   const onChangeNewProduct = (field) => (e) => {
     setNewProduct((prev) => ({ ...prev, [field]: e.target.value }));
   };
@@ -57,6 +84,8 @@ function ProductsPage() {
       description: newProduct.description.trim(),
       price: Number(newProduct.price),
       stockQuantity: Number(newProduct.stockQuantity),
+      categoryID: newProduct.categoryID === '' ? null : Number(newProduct.categoryID),
+      supplierID: newProduct.supplierID === '' ? null : Number(newProduct.supplierID),
     };
 
     if (!payload.name) {
@@ -66,6 +95,16 @@ function ProductsPage() {
 
     if (Number.isNaN(payload.price) || Number.isNaN(payload.stockQuantity)) {
       setSaveError('Price and Stock must be valid numbers.');
+      return;
+    }
+
+    if (payload.categoryID != null && Number.isNaN(payload.categoryID)) {
+      setSaveError('Category must be a valid value.');
+      return;
+    }
+
+    if (payload.supplierID != null && Number.isNaN(payload.supplierID)) {
+      setSaveError('Supplier must be a valid value.');
       return;
     }
 
@@ -86,7 +125,7 @@ function ProductsPage() {
       } else {
         await productApi.add(payload);
       }
-      setNewProduct({ name: '', description: '', price: '', stockQuantity: '' });
+      setNewProduct({ name: '', description: '', price: '', stockQuantity: '', categoryID: '', supplierID: '' });
       setShowAddForm(false);
       setEditingProductId(null);
       await fetchProducts();
@@ -108,8 +147,11 @@ function ProductsPage() {
       description: product.description ?? '',
       price: String(product.price ?? ''),
       stockQuantity: String(product.stockQuantity ?? ''),
+      categoryID: product.categoryID == null ? '' : String(product.categoryID),
+      supplierID: product.supplierID == null ? '' : String(product.supplierID),
     });
     setShowAddForm(true);
+    fetchOptions();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -134,6 +176,10 @@ function ProductsPage() {
     (p.description ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const categoriesById = Object.fromEntries(
+    categories.map((c) => [c.categoryID, c])
+  );
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -147,8 +193,9 @@ function ProductsPage() {
           onClick={() => {
             setSaveError('');
             setEditingProductId(null);
-            setNewProduct({ name: '', description: '', price: '', stockQuantity: '' });
+            setNewProduct({ name: '', description: '', price: '', stockQuantity: '', categoryID: '', supplierID: '' });
             setShowAddForm((v) => !v);
+            fetchOptions();
           }}
           type="button"
         >
@@ -208,7 +255,45 @@ function ProductsPage() {
                 placeholder="0"
               />
             </div>
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700">Category</label>
+              <select
+                value={newProduct.categoryID}
+                onChange={onChangeNewProduct('categoryID')}
+                className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white"
+                disabled={optionsLoading}
+              >
+                <option value="">— Select category —</option>
+                {categories.map((c) => (
+                  <option key={c.categoryID} value={String(c.categoryID)}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700">Supplier</label>
+              <select
+                value={newProduct.supplierID}
+                onChange={onChangeNewProduct('supplierID')}
+                className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white"
+                disabled={optionsLoading}
+              >
+                <option value="">— Select supplier —</option>
+                {suppliers.map((s) => (
+                  <option key={s.supplierID} value={String(s.supplierID)}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {optionsError && (
+            <p className="text-sm font-semibold text-red-600">{optionsError}</p>
+          )}
 
           {saveError && (
             <p className="text-sm font-semibold text-red-600">{saveError}</p>
@@ -317,7 +402,11 @@ function ProductsPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 font-medium text-slate-400">—</td>
+                <td className="px-6 py-4 font-medium text-slate-700">
+                  {product.categoryID != null
+                    ? (categoriesById[product.categoryID]?.name ?? `#${product.categoryID}`)
+                    : '—'}
+                </td>
                 <td className="px-6 py-4 font-semibold text-slate-900">${product.price.toLocaleString()}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${

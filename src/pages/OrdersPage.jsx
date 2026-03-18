@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ShoppingCart, 
   Plus, 
@@ -12,7 +13,7 @@ import {
   Edit2,
   Trash2
 } from 'lucide-react';
-import { orderApi, productApi } from '../api';
+import { customerApi, orderApi, productApi } from '../api';
 
 const StatusBadge = ({ status }) => {
   const configs = {
@@ -33,6 +34,8 @@ const StatusBadge = ({ status }) => {
 };
 
 function OrdersPage() {
+  const navigate = useNavigate();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -42,6 +45,7 @@ function OrdersPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [newOrder, setNewOrder] = useState({
     customerID: '',
     productID: '',
@@ -58,6 +62,7 @@ function OrdersPage() {
   useEffect(() => {
     fetchOrders();
     fetchProducts();
+    fetchCustomers();
   }, []);
 
   const fetchOrders = async () => {
@@ -65,7 +70,15 @@ function OrdersPage() {
       setLoading(true);
       setLoadError('');
       const response = await orderApi.getAll();
-      setOrders(response.data);
+      const list = Array.isArray(response.data) ? response.data : [];
+      // Ensure newest-first in the UI even if backend ordering changes.
+      list.sort((a, b) => {
+        const da = new Date(a.orderDate ?? 0).getTime();
+        const db = new Date(b.orderDate ?? 0).getTime();
+        if (db !== da) return db - da;
+        return Number(b.orderID ?? 0) - Number(a.orderID ?? 0);
+      });
+      setOrders(list);
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
@@ -88,19 +101,39 @@ function OrdersPage() {
     }
   };
 
+
+  const fetchCustomers = async () => {
+    try
+    {
+      const response = await customerApi.getAll();
+      setCustomers(Array.isArray(response.data) ? response.data : []);
+    }
+    catch (error)
+    {
+      console.error('Error fetching customers (for order create):', error);
+      setCustomers([]);
+    }
+  };
+
+  const resetNewOrder = () => {
+    setNewOrder({ customerID: '', productID: '', quantity: '1', unitPrice: '' });
+  };
+
   const onChangeNewOrder = (field) => (e) => {
     const value = e.target.value;
-    setNewOrder((prev) => ({ ...prev, [field]: value }));
+    setNewOrder((prev) => {
+      const next = { ...prev, [field]: value };
 
-    if (field === 'productID')
-    {
-      const productIdNum = Number(value);
-      const product = products.find((p) => p.productID === productIdNum);
-      if (product && (newOrder.unitPrice === '' || Number(newOrder.unitPrice) === 0))
+      if (field === 'productID')
       {
-        setNewOrder((prev) => ({ ...prev, unitPrice: String(product.price ?? '') }));
+        const productIdNum = Number(value);
+        const product = products.find((p) => p.productID === productIdNum);
+        // Always take product price at selection time.
+        next.unitPrice = product ? String(product.price ?? '') : '';
       }
-    }
+
+      return next;
+    });
   };
 
   const submitNewOrder = async (e) => {
@@ -113,7 +146,7 @@ function OrdersPage() {
     const unitPrice = Number(newOrder.unitPrice);
 
     if (Number.isNaN(customerID) || customerID <= 0) {
-      setCreateError('CustomerID must be a valid number.');
+      setCreateError('Customer must be selected.');
       return;
     }
     if (Number.isNaN(productID) || productID <= 0) {
@@ -199,13 +232,21 @@ function OrdersPage() {
     }
   };
 
+
   const filteredOrders = orders.filter((o) => {
     const needle = searchTerm.trim().toLowerCase();
     if (!needle) return true;
     const orderIdText = `ord-${String(o.orderID ?? '').padStart(4, '0')}`;
+
+    const customer = customers.find((c) => c.customerID === o.customerID);
+    const customerName = customer
+      ? `${String(customer.firstName ?? '').trim()} ${String(customer.lastName ?? '').trim()}`.trim()
+      : '';
+
     return (
       orderIdText.includes(needle) ||
       String(o.customerID ?? '').toLowerCase().includes(needle) ||
+      customerName.toLowerCase().includes(needle) ||
       String(o.status ?? '').toLowerCase().includes(needle)
     );
   });
@@ -224,6 +265,10 @@ function OrdersPage() {
             setCreateError('');
             setShowEditForm(false);
             setEditingOrderId(null);
+            if (!showCreateForm)
+            {
+              resetNewOrder();
+            }
             setShowCreateForm((v) => !v);
           }}
         >
@@ -242,14 +287,22 @@ function OrdersPage() {
         <form onSubmit={submitNewOrder} className="card space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-sm font-semibold text-slate-700">Customer ID</label>
-              <input
+              <label className="text-sm font-semibold text-slate-700">Customer</label>
+              <select
                 value={newOrder.customerID}
                 onChange={onChangeNewOrder('customerID')}
-                type="number"
-                className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-                placeholder="1"
-              />
+                className="mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              >
+                <option value="">Select customer...</option>
+                {customers.map((c) => {
+                  const name = `${String(c.firstName ?? '').trim()} ${String(c.lastName ?? '').trim()}`.trim() || `Customer #${c.customerID}`;
+                  return (
+                    <option key={c.customerID} value={c.customerID}>
+                      {name}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
             <div>
               <label className="text-sm font-semibold text-slate-700">Product</label>
@@ -300,7 +353,11 @@ function OrdersPage() {
             <button
               className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
               type="button"
-              onClick={() => setShowCreateForm(false)}
+              onClick={() => {
+                setCreateError('');
+                resetNewOrder();
+                setShowCreateForm(false);
+              }}
               disabled={creating}
             >
               Cancel
@@ -392,41 +449,53 @@ function OrdersPage() {
                 <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-400">Loading orders...</td></tr>
               ) : filteredOrders.map((order) => (
                 <tr key={order.orderID} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 font-mono text-sm text-slate-600">#ORD-{order.orderID.toString().padStart(4, '0')}</td>
-                  <td className="px-6 py-4 font-medium text-slate-900">Client #{order.customerID}</td>
-                  <td className="px-6 py-4 text-sm text-slate-500">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={14} />
-                      {new Date(order.orderDate).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-slate-900">${order.totalAmount.toLocaleString()}</td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={order.status} />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        className="p-2 text-slate-400 hover:text-primary-600 transition-colors"
-                        type="button"
-                        onClick={() => startEditOrder(order)}
-                        title="Edit"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        className="p-2 text-slate-400 hover:text-red-600 transition-colors"
-                        type="button"
-                        onClick={() => deleteOrder(order)}
-                        title="Delete"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                      <button className="text-primary-600 hover:text-primary-700 font-semibold text-sm inline-flex items-center gap-1" type="button">
-                        View <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  </td>
+                    <td className="px-6 py-4 font-mono text-sm text-slate-600">#ORD-{order.orderID.toString().padStart(4, '0')}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      {(() => {
+                        const c = customers.find((x) => x.customerID === order.customerID);
+                        const name = c
+                          ? `${String(c.firstName ?? '').trim()} ${String(c.lastName ?? '').trim()}`.trim()
+                          : '';
+                        return name || `Client #${order.customerID}`;
+                      })()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={14} />
+                        {new Date(order.orderDate).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-slate-900">${order.totalAmount.toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={order.status} />
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          className="p-2 text-slate-400 hover:text-primary-600 transition-colors"
+                          type="button"
+                          onClick={() => startEditOrder(order)}
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                          type="button"
+                          onClick={() => deleteOrder(order)}
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        <button
+                          className="text-primary-600 hover:text-primary-700 font-semibold text-sm inline-flex items-center gap-1"
+                          type="button"
+                          onClick={() => navigate(`/orders/${order.orderID}`)}
+                        >
+                          View <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </td>
                 </tr>
               ))}
             </tbody>

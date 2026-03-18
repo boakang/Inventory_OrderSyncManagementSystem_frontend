@@ -49,7 +49,7 @@ const Layout = ({ children }) => {
           <SidebarLink to="/customers" icon={Users} active={location.pathname === '/customers'}>
             Customers
           </SidebarLink>
-          <SidebarLink to="/orders" icon={ShoppingCart} active={location.pathname === '/orders'}>
+          <SidebarLink to="/orders" icon={ShoppingCart} active={location.pathname === '/orders' || location.pathname.startsWith('/orders/') }>
             Orders
           </SidebarLink>
           <SidebarLink to="/inventory" icon={Warehouse} active={location.pathname === '/inventory'}>

@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5080', // Match backend port from image
+        target: 'http://127.0.0.1:5080',
         changeOrigin: true,
         secure: false
       }

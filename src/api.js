@@ -15,6 +15,16 @@ export const productApi = {
   delete: (id) => api.delete(`/products/${id}`),
 };
 
+export const categoryApi = {
+  getAll: () => api.get('/categories'),
+  getById: (id) => api.get(`/categories/${id}`),
+};
+
+export const supplierApi = {
+  getAll: () => api.get('/suppliers'),
+  getById: (id) => api.get(`/suppliers/${id}`),
+};
+
 export const customerApi = {
   getAll: () => api.get('/customers'),
   getById: (id) => api.get(`/customers/${id}`),
@@ -43,6 +53,11 @@ export const reportApi = {
   getTopSelling: (topN = 5) => api.get(`/reports/top-selling?topN=${topN}`),
   getInventory: () => api.get('/reports/inventory'),
   getRevenue: (period = 'daily') => api.get(`/reports/revenue?period=${period}`),
+};
+
+export const devApi = {
+  resetDb: (reseedIdentities = true) => api.post(`/dev/reset?reseedIdentities=${reseedIdentities}`),
+  seed: () => api.post('/dev/seed'),
 };
 
 export default api;

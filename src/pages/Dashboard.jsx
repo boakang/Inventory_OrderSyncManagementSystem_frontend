@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Users, ShoppingCart, TrendingUp } from 'lucide-react';
-import { productApi, customerApi, orderApi } from '../api';
+import { productApi, customerApi, orderApi, devApi } from '../api';
 
 const StatCard = ({ title, value, icon: Icon, color, trend }) => (
   <div className="card hover:shadow-md transition-shadow">
@@ -34,6 +34,9 @@ function Dashboard() {
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+
+  const [devResetting, setDevResetting] = useState(false);
+  const isDev = import.meta.env.DEV;
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -91,6 +94,34 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {isDev && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-semibold"
+            disabled={devResetting}
+            onClick={async () => {
+              const ok = window.confirm('Dev action: Reset DB (clears customers/products/orders/inventory; keeps categories & suppliers). Continue?');
+              if (!ok) return;
+
+              try {
+                setDevResetting(true);
+                await devApi.resetDb(true);
+                await devApi.seed();
+                window.location.reload();
+              } catch (error) {
+                console.error('Dev reset+reseed failed:', error);
+                alert('Reset failed. Check backend is running in Development.');
+              } finally {
+                setDevResetting(false);
+              }
+            }}
+          >
+            {devResetting ? 'Dev: Resetting...' : 'Dev: Reset DB'}
+          </button>
+        </div>
+      )}
+
       {loadError && (
         <div className="card border border-red-200 bg-red-50 text-red-700 font-semibold">
           {loadError}

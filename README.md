@@ -37,7 +37,21 @@ npm run dev
 ```
 
 - Dev server mặc định: `http://localhost:3000`
-- Proxy API (dev) cấu hình trong `vite.config.js`: `/api` được forward sang backend (mặc định `http://localhost:5080`).
+- Dev server mặc định: `http://localhost:3000`
+- Proxy API (dev) cấu hình trong `vite.config.js`: `/api` được forward sang backend (mặc định `http://127.0.0.1:5080`).
+
+### Troubleshooting nhanh (Vite proxy `ECONNREFUSED`)
+
+Nếu thấy log dạng:
+
+`[vite] http proxy error: /api/...` + `AggregateError [ECONNREFUSED]`
+
+thì thường là **backend chưa chạy / chạy sai port** so với cấu hình proxy.
+
+- Kiểm tra backend có listen port `5080` không (Windows):
+  - `netstat -ano | findstr ":5080"`
+- Gọi thử API trực tiếp vào backend (PowerShell lưu ý dùng `curl.exe`):
+  - `curl.exe -i http://127.0.0.1:5080/api/products`
 
 Build/preview:
 
@@ -51,21 +65,27 @@ npm run preview
 ```
 src/
   main.jsx              # Entry (render React)
-  App.jsx               # Router + bố cục layout
+  App.jsx               # Router + bố cục layout (đang dùng)
+  App.js                # File legacy/không dùng trong luồng chạy hiện tại
   api.js                # Axios client + các hàm gọi API
   components/
     Layout.jsx          # Layout (sidebar/header)
   pages/
     Dashboard.jsx
     ProductsPage.jsx
+    ProductsPage.js
     CustomersPage.jsx
+    CustomersPage.js
     OrdersPage.jsx
+    OrdersPage.js
     InventoryPage.jsx
+    InventoryPage.js
     ReportsPage.jsx
+    ReportsPage.js
   index.css             # Tailwind directives + utility classes
 ```
 
-Ghi chú: trong `src/` và `src/pages/` có cả file `.js` và `.jsx`. Luồng chạy hiện tại đang dùng các file `.jsx` (import từ `main.jsx` -> `App.jsx`).
+Ghi chú: trong `src/` và `src/pages/` có cả file `.js` và `.jsx`. Luồng chạy hiện tại đang dùng các file `.jsx` (import từ `main.jsx` -> `App.jsx`). Các file `.js` có thể là bản cũ/đang chuyển đổi.
 
 ## Routing
 

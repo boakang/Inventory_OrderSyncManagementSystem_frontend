@@ -50,8 +50,10 @@ function InventoryPage() {
     }
   };
 
+  const productById = (productId) => products.find((x) => x.productID === productId);
+
   const productNameById = (productId) => {
-    const p = products.find((x) => x.productID === productId);
+    const p = productById(productId);
     return p?.name ?? `Product #${productId}`;
   };
 
@@ -163,6 +165,8 @@ function InventoryPage() {
               <thead>
                 <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100 bg-slate-50/30">
                   <th className="px-6 py-4">Product</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Supplier</th>
                   <th className="px-6 py-4">Product ID</th>
                   <th className="px-6 py-4">Quantity</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -171,15 +175,17 @@ function InventoryPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400">Loading inventory...</td>
+                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400">Loading inventory...</td>
                   </tr>
                 ) : inventory.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400">No inventory data.</td>
+                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400">No inventory data.</td>
                   </tr>
                 ) : inventory.map((row) => (
                   <tr key={row.productID} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{productNameById(row.productID)}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">{row.productName || productNameById(row.productID)}</td>
+                    <td className="px-6 py-4 text-slate-700">{row.categoryName ?? '—'}</td>
+                    <td className="px-6 py-4 text-slate-700">{row.supplierName ?? '—'}</td>
                     <td className="px-6 py-4 font-mono text-sm text-slate-600">{row.productID}</td>
                     <td className="px-6 py-4 font-mono font-bold text-slate-900">{row.quantity}</td>
                     <td className="px-6 py-4 text-right">
